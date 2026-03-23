@@ -1,0 +1,5 @@
+# All non-API, non-asset routes serve the SPA
+# API routes and static files are handled before this rule
+
+/api/*  /api/:splat  200
+/*      /index.html  200

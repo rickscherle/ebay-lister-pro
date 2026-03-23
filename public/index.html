@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>ListAI</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dark-ui.css">
+  <style>
+    /* ── App-level overrides ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* Login screen */
+    .login-screen {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      background: var(--bg);
+    }
+    .login-logo { font-size: 32px; font-weight: 700; letter-spacing: -1px; margin-bottom: 8px; }
+    .login-logo span { color: var(--accent); }
+    .login-tagline { font-size: 14px; color: var(--text-muted); margin-bottom: 48px; }
+    .login-card {
+      width: 100%; max-width: 360px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+    }
+    .login-card h2 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+    .login-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5; }
+    .btn-ebay {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 14px 20px;
+      background: #e53238; color: white;
+      border: none; border-radius: var(--radius);
+      font-family: var(--font); font-size: 15px; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .btn-ebay:hover { opacity: 0.9; }
+    .login-note { font-size: 11px; color: var(--text-dim); text-align: center; margin-top: 16px; }
+
+    /* Profile dropdown */
+    .profile-wrap { position: relative; }
+    .profile-btn {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      border: none; font-family: var(--font);
+      flex-shrink: 0;
+    }
+    .profile-dropdown {
+      display: none; position: absolute; right: 0; top: 40px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); min-width: 180px;
+      z-index: 200; overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .profile-dropdown.open { display: block; }
+    .profile-dropdown-item {
+      display: block; width: 100%; padding: 12px 16px;
+      background: none; border: none; border-bottom: 1px solid var(--border);
+      text-align: left; font-family: var(--font); font-size: 14px;
+      color: var(--text-muted); cursor: pointer;
+      text-decoration: none;
+      transition: background 0.12s;
+    }
+    .profile-dropdown-item:last-child { border-bottom: none; }
+    .profile-dropdown-item:hover { background: var(--surface2); color: var(--text); }
+    .profile-dropdown-item.danger { color: var(--danger); }
+
+    /* Photo grid for new listing */
+    .photo-capture-grid { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+    .photo-capture-thumb {
+      position: relative; flex-shrink: 0;
+      width: 80px; height: 80px;
+      border-radius: 8px; overflow: hidden;
+      border: 1.5px solid var(--border);
+      background: var(--surface2);
+    }
+    .photo-capture-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-rm {
+      position: absolute; top: 3px; right: 3px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: rgba(0,0,0,0.65); color: white;
+      border: none; font-size: 10px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .photo-add-btn {
+      flex-shrink: 0; width: 80px; height: 80px;
+      border-radius: 8px; border: 1.5px dashed var(--border);
+      background: var(--surface); cursor: pointer;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 4px; color: var(--text-dim);
+      font-family: var(--font); font-size: 10px; font-weight: 600;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .photo-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Spinner */
+    .spinner-wrap { text-align: center; padding: 60px 24px; }
+    .spinner {
+      width: 40px; height: 40px; margin: 0 auto 16px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner-label { font-size: 15px; font-weight: 500; color: var(--text-muted); }
+    .spinner-sub { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+    /* Analyze steps */
+    .step-indicator {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 20px;
+    }
+    .step-dot {
+      width: 24px; height: 24px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; flex-shrink: 0;
+    }
+    .step-dot.active { background: var(--accent); color: white; }
+    .step-dot.done { background: rgba(34,197,94,0.2); color: var(--success); }
+    .step-dot.pending { background: var(--surface2); color: var(--text-dim); }
+    .step-line { flex: 1; height: 1px; background: var(--border); }
+
+    /* Result price card */
+    .price-hero {
+      background: linear-gradient(135deg, #1e3a5f 0%, #1e4d8c 100%);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: var(--radius); padding: 20px;
+      margin-bottom: 14px;
+    }
+    .price-hero-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
+    .price-hero-num { font-size: 42px; font-weight: 700; color: white; letter-spacing: -1px; line-height: 1; }
+    .price-hero-range { font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+
+    /* Lightbox */
+    #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+    #lightbox.open { display: flex; }
+    #lightbox img { max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 4px; }
+    #lightbox-close { color: var(--text-muted); background: none; border: none; font-size: 28px; cursor: pointer; position: absolute; top: 16px; right: 20px; }
+
+    /* Photo management grid on detail screen */
+    .detail-photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    .detail-photo-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: var(--surface2); cursor: pointer; }
+    .detail-photo-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .detail-photo-delete {
+      position: absolute; bottom: 4px; right: 4px;
+      background: rgba(239,68,68,0.85); color: white;
+      border: none; border-radius: 4px; font-size: 10px;
+      font-weight: 600; padding: 3px 7px; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    /* Upload zone on detail screen */
+    .add-photo-zone {
+      aspect-ratio: 1; border-radius: 8px;
+      border: 1.5px dashed var(--border);
+      background: var(--surface);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 4px; color: var(--text-dim);
+      cursor: pointer; font-size: 11px; font-weight: 600;
+      font-family: var(--font);
+      transition: border-color 0.15s;
+    }
+    .add-photo-zone:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Nav badge on stat cards */
+    .stat-card-link { text-decoration: none; }
+
+    /* Section header with action */
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ──────────────────────────────────────────────────────── -->
+<div id="screen-login" style="display:none">
+  <div class="login-screen">
+    <div class="login-logo">List<span>AI</span></div>
+    <div class="login-tagline">eBay listing generator</div>
+    <div class="login-card">
+      <h2>Sign in to get started</h2>
+      <p>ListAI uses your eBay account for authentication. You only need to authorize once.</p>
+      <a href="/api/auth/ebay" class="btn-ebay">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Sign in with eBay
+      </a>
+      <div class="login-note">Your eBay credentials are handled directly by eBay. ListAI never sees your password.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP SHELL (shown when logged in) ─────────────────────────────────── -->
+<div id="app-shell" style="display:none">
+  <div class="app">
+
+    <!-- Header -->
+    <div class="app-header-wrap">
+      <div class="app-header">
+        <span class="app-logo" style="cursor:pointer" onclick="showView('dashboard')">List<span>AI</span></span>
+        <span id="header-back" style="display:none">
+          <button class="zone-back" onclick="historyBack()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;color:var(--text-muted);font-size:13px;gap:4px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            Back
+          </button>
+        </span>
+        <span id="header-screen-name" class="screen-name"></span>
+        <div class="profile-wrap">
+          <button class="profile-btn" id="profileBtn" onclick="toggleProfile()"></button>
+          <div class="profile-dropdown" id="profileDropdown">
+            <div class="profile-dropdown-item" style="font-weight:600;color:var(--text);cursor:default;border-bottom:1px solid var(--border)" id="profileName"></div>
+            <button class="profile-dropdown-item" onclick="showView('settings');closeProfile()">⚙ Settings</button>
+            <button class="profile-dropdown-item danger" onclick="doLogout()">Sign Out</button>
+          </div>
+        </div>
+      </div>
+      <!-- Flash messages -->
+      <div id="flash-container" style="padding:0 16px 8px;display:flex;flex-direction:column;gap:6px;"></div>
+      <!-- API key warning -->
+      <div id="no-key-banner" class="alert-banner" style="display:none;margin:0 16px 8px;cursor:pointer" onclick="showView('settings')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        No Anthropic API key set — tap to add it in Settings
+        <span style="margin-left:auto;font-size:11px;color:var(--text-dim)">→</span>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <main class="app-body">
+
+      <!-- ── DASHBOARD ──────────────────────────────────────────────────── -->
+      <div id="view-dashboard" class="view">
+        <div id="dash-syncing" class="spinner-wrap" style="display:none;padding:40px 24px">
+          <div class="spinner"></div>
+          <div class="spinner-label">Syncing with eBay…</div>
+        </div>
+        <div id="dash-content" style="display:none">
+          <div id="dash-sync-error" class="alert-banner alert-banner-danger" style="display:none;margin-bottom:14px"></div>
+          <div class="stat-grid" id="statGrid">
+            <a class="stat-card stat-blue stat-card-link" onclick="showListings('listed')">
+              <div class="stat-num" id="count-listed">–</div>
+              <div class="stat-label">Listed</div>
+            </a>
+            <a class="stat-card stat-green stat-card-link" onclick="showListings('sold')">
+              <div class="stat-num" id="count-sold">–</div>
+              <div class="stat-label">Sold</div>
+            </a>
+            <a class="stat-card stat-amber stat-card-link" onclick="showListings('draft')">
+              <div class="stat-num" id="count-draft">–</div>
+              <div class="stat-label">Drafts</div>
+            </a>
+            <a class="stat-card stat-card-link" onclick="showListings('new')">
+              <div class="stat-num" id="count-new" style="color:var(--text-muted)">–</div>
+              <div class="stat-label">New</div>
+            </a>
+          </div>
+          <a class="stat-card stat-card-link" onclick="showListings('all')" style="display:block;margin-bottom:18px;text-align:center;padding:12px">
+            <span style="font-size:13px;color:var(--text-muted)">View all listings →</span>
+          </a>
+          <button class="btn btn-primary" onclick="showView('new')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add New Item
+          </button>
+        </div>
+      </div>
+
+      <!-- ── LISTING LIST ───────────────────────────────────────────────── -->
+      <div id="view-listings" class="view">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" class="search-input" id="listingSearch" placeholder="Search listings…" oninput="filterListings(this.value)">
+        </div>
+        <div id="listings-container" class="card-list"></div>
+      </div>
+
+      <!-- ── ITEM DETAIL ────────────────────────────────────────────────── -->
+      <div id="view-detail" class="view">
+        <div id="detail-loading" class="spinner-wrap" style="display:none">
+          <div class="spinner"></div>
+        </div>
+        <div id="detail-body" style="display:none">
+          <!-- Zone nav -->
+          <div class="zone-nav">
+            <span class="id-badge" id="detail-id-badge"></span>
+            <span class="badge" id="detail-status-badge"></span>
+            <span id="detail-ebay-badge" style="display:none" class="badge badge-blue">On eBay</span>
+          </div>
+          <div class="zone-title" id="detail-title-display"></div>
+          <div class="zone-meta" id="detail-meta"></div>
+
+          <!-- Action zone -->
+          <div class="action-zone" id="detail-actions">
+            <button class="hdr-btn hdr-btn-primary" id="btn-edit" onclick="enterEditMode()">✎ Edit</button>
+            <button class="hdr-btn hdr-btn-success" id="btn-push" onclick="pushToEbay()">↑ Push to eBay</button>
+            <button class="hdr-btn hdr-btn-danger" onclick="deleteListing()">✕ Delete</button>
+            <!-- Edit mode buttons (hidden by default) -->
+            <button class="hdr-btn hdr-btn-success" id="btn-save" style="display:none" onclick="saveDetail()">✓ Save</button>
+            <button class="hdr-btn" id="btn-cancel" style="display:none" onclick="cancelEdit()">✕ Cancel</button>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tabs-strip">
+            <button class="tab-btn active" onclick="switchTab('info', this)">Info</button>
+            <button class="tab-btn inactive" onclick="switchTab('photos', this)">Photos</button>
+            <button class="tab-btn inactive" onclick="switchTab('ebay', this)">eBay</button>
+          </div>
+
+          <!-- Info tab -->
+          <div class="tab-panel active" id="tab-info">
+            <!-- Read mode -->
+            <div id="detail-read-mode">
+              <div class="detail-section">
+                <div class="detail-section-title">Pricing</div>
+                <div class="detail-row"><div class="detail-key">Price</div><div class="detail-val" id="dv-price"></div></div>
+                <div class="detail-row"><div class="detail-key">Condition</div><div class="detail-val" id="dv-condition"></div></div>
+                <div class="detail-row"><div class="detail-key">Category</div><div class="detail-val" id="dv-category"></div></div>
+              </div>
+              <div class="detail-section">
+                <div class="detail-section-title">Listing Content</div>
+                <div class="detail-row"><div class="detail-key">Title</div><div class="detail-val" id="dv-title"></div></div>
+                <div class="detail-row" style="flex-direction:column;gap:6px"><div class="detail-key">Description</div><div class="detail-val" id="dv-description" style="white-space:pre-wrap;line-height:1.6"></div></div>
+                <div class="detail-row" style="flex-direction:column;gap:6px"><div class="detail-key">Item Specifics</div><div class="detail-val" id="dv-specifics" style="white-space:pre-wrap"></div></div>
+                <div class="detail-row"><div class="detail-key">Keywords</div><div class="detail-val" id="dv-keywords" style="color:var(--text-muted);font-size:12px"></div></div>
+                <div class="detail-row"><div class="detail-key">Shipping</div><div class="detail-val" id="dv-shipping"></div></div>
+              </div>
+              <div class="detail-section" id="dv-notes-section" style="display:none">
+                <div class="detail-section-title">Seller Notes</div>
+                <div class="detail-row"><div class="detail-val" id="dv-notes" style="white-space:pre-wrap"></div></div>
+              </div>
+            </div>
+            <!-- Edit mode -->
+            <div id="detail-edit-mode" style="display:none">
+              <div class="form-card">
+                <div class="form-section-title">Listing Details</div>
+                <div class="fg"><label>Title</label><input type="text" id="edit-title" maxlength="80"></div>
+                <div class="form-row-2">
+                  <div class="fg"><label>Price ($)</label><input type="number" id="edit-price" step="0.01" min="0"></div>
+                  <div class="fg">
+                    <label>Condition</label>
+                    <select id="edit-condition">
+                      <option value="New">New</option>
+                      <option value="Open Box">Open Box</option>
+                      <option value="Used - Like New">Used – Like New</option>
+                      <option value="Used - Good">Used – Good</option>
+                      <option value="Used - Acceptable">Used – Acceptable</option>
+                      <option value="For Parts / Not Working">For Parts / Not Working</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="fg"><label>Category</label><input type="text" id="edit-category"></div>
+                <div class="fg"><label>Description</label><textarea id="edit-description" style="min-height:160px"></textarea></div>
+                <div class="fg"><label>Item Specifics (label: value, one per line)</label><textarea id="edit-specifics" style="min-height:100px"></textarea></div>
+                <div class="fg"><label>Search Keywords</label><input type="text" id="edit-keywords"></div>
+                <div class="fg"><label>Shipping Tip</label><input type="text" id="edit-shipping"></div>
+                <div class="fg"><label>Notes</label><textarea id="edit-notes" style="min-height:72px"></textarea></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Photos tab -->
+          <div class="tab-panel" id="tab-photos">
+            <div id="photos-grid-wrap">
+              <div class="detail-photo-grid" id="detail-photos-grid"></div>
+            </div>
+            <div id="photos-empty" class="empty-state" style="display:none">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <div>No photos yet</div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:12px">
+              <button class="btn btn-secondary" style="font-size:13px;padding:10px" onclick="document.getElementById('photoUploadInput').click()">
+                📷 Take Photo
+              </button>
+              <button class="btn btn-secondary" style="font-size:13px;padding:10px" onclick="document.getElementById('photoLibraryInput').click()">
+                🖼 From Library
+              </button>
+            </div>
+          </div>
+
+          <!-- eBay tab -->
+          <div class="tab-panel" id="tab-ebay">
+            <div class="detail-section">
+              <div class="detail-section-title">eBay Info</div>
+              <div class="detail-row"><div class="detail-key">Status</div><div class="detail-val" id="ebay-status"></div></div>
+              <div class="detail-row" id="ebay-item-id-row" style="display:none"><div class="detail-key">Item ID</div><div class="detail-val" id="ebay-item-id" style="font-family:var(--font-mono);font-size:13px"></div></div>
+              <div class="detail-row"><div class="detail-key">Category ID</div><div class="detail-val" id="ebay-category-id"></div></div>
+              <div class="detail-row"><div class="detail-key">Condition ID</div><div class="detail-val" id="ebay-condition-id"></div></div>
+            </div>
+            <div id="push-error-banner" class="flash flash-error" style="display:none;margin-bottom:12px"></div>
+            <div id="push-success-banner" class="flash flash-success" style="display:none;margin-bottom:12px"></div>
+            <button class="btn btn-primary" onclick="pushToEbay()" id="btn-push-ebay">
+              ↑ Push to eBay as Draft
+            </button>
+            <p style="font-size:12px;color:var(--text-dim);margin-top:8px;line-height:1.5">Pushes a verified draft to eBay. Review and publish in eBay Seller Hub.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── NEW LISTING ────────────────────────────────────────────────── -->
+      <div id="view-new" class="view">
+        <!-- Step 1: Photos -->
+        <div id="new-step-photos">
+          <div class="page-title" style="margin-bottom:4px">New Listing</div>
+          <div class="page-subtitle">Add photos of your item</div>
+          <div class="form-card">
+            <div class="section-label">Photos (up to 6)</div>
+            <div class="photo-capture-grid" id="newPhotoStrip"></div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="hdr-btn" onclick="document.getElementById('newCameraInput').click()" style="flex:1;justify-content:center">📷 Camera</button>
+              <button class="hdr-btn" onclick="document.getElementById('newLibraryInput').click()" style="flex:1;justify-content:center">🖼 Library</button>
+            </div>
+          </div>
+          <div id="new-photos-error" class="flash flash-error" style="display:none;margin-bottom:12px"></div>
+          <button class="btn btn-primary" id="btn-to-details" onclick="goToDetails()" disabled>Next →</button>
+          <button class="btn btn-secondary" onclick="cancelNew()" style="margin-top:10px">Cancel</button>
+        </div>
+
+        <!-- Step 2: Details -->
+        <div id="new-step-details" style="display:none">
+          <div class="page-title" style="margin-bottom:4px">Item Details</div>
+          <div class="page-subtitle">Help the AI write a better listing</div>
+          <div class="form-card">
+            <div class="fg">
+              <label>Condition</label>
+              <select id="new-condition">
+                <option>New</option>
+                <option>Open Box</option>
+                <option>Used - Like New</option>
+                <option selected>Used - Good</option>
+                <option>Used - Acceptable</option>
+                <option>For Parts / Not Working</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>Notes <span style="text-transform:none;font-weight:400;color:var(--text-dim)">(optional)</span></label>
+              <textarea id="new-notes" placeholder="Missing cables, original box, any defects…"></textarea>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="runAnalyze()">Generate Listing</button>
+          <button class="btn btn-secondary" onclick="backToPhotos()" style="margin-top:10px">← Back</button>
+        </div>
+
+        <!-- Step 3: Analyzing -->
+        <div id="new-step-analyzing" style="display:none">
+          <div class="spinner-wrap">
+            <div class="spinner"></div>
+            <div class="spinner-label" id="analyze-label">Analyzing photos…</div>
+            <div class="spinner-sub">Reading labels, specs, and writing your listing</div>
+          </div>
+        </div>
+
+        <!-- Step 4: Review -->
+        <div id="new-step-review" style="display:none">
+          <div class="page-title" style="margin-bottom:4px">Review Listing</div>
+          <div class="page-subtitle">Edit before saving</div>
+          <div id="new-analyze-error" class="flash flash-error" style="display:none;margin-bottom:12px"></div>
+          <div class="price-hero">
+            <div class="price-hero-label">Recommended Price</div>
+            <div class="price-hero-num" id="review-price"></div>
+            <div class="price-hero-range" id="review-range"></div>
+          </div>
+          <div class="form-card">
+            <div class="fg"><label>Title</label><input type="text" id="review-title" maxlength="80"></div>
+            <div class="fg"><label>Category</label><input type="text" id="review-category"></div>
+            <div class="fg"><label>Description</label><textarea id="review-description" style="min-height:140px"></textarea></div>
+            <div class="fg"><label>Item Specifics</label><textarea id="review-specifics" style="min-height:90px" placeholder="Brand: Foo&#10;Model: Bar"></textarea></div>
+            <div class="fg"><label>Keywords</label><input type="text" id="review-keywords"></div>
+            <div class="fg"><label>Shipping Tip</label><input type="text" id="review-shipping"></div>
+          </div>
+          <button class="btn btn-primary" onclick="saveListing()">Save as New</button>
+          <button class="btn btn-secondary" onclick="retryAnalyze()" style="margin-top:10px">↺ Re-analyze</button>
+          <button class="btn btn-secondary" onclick="cancelNew()" style="margin-top:10px">Cancel</button>
+        </div>
+      </div>
+
+      <!-- ── SETTINGS ───────────────────────────────────────────────────── -->
+      <div id="view-settings" class="view">
+        <div class="page-title" style="margin-bottom:4px">Settings</div>
+        <div class="page-subtitle">Manage your API key and account</div>
+
+        <!-- No key yet -->
+        <div id="settings-no-key">
+          <div class="form-card">
+            <div class="form-section-title">Anthropic API Key</div>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.6">
+              ListAI uses Claude to analyze your photos and generate listings. You need your own Anthropic API key.
+              Each listing costs roughly $0.01–$0.03. New accounts get $5 in free credit.
+            </p>
+            <ol style="padding-left:18px;font-size:13px;color:var(--text-muted);line-height:2;margin-bottom:20px">
+              <li>Go to <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent-hi)">console.anthropic.com</a> and create an account</li>
+              <li>Add a payment method under Settings → Billing</li>
+              <li>Create a key under Settings → API Keys (starts with <code style="font-family:var(--font-mono);background:var(--surface2);padding:1px 5px;border-radius:3px">sk-ant-</code>)</li>
+              <li>Paste it below</li>
+            </ol>
+            <div id="settings-error" class="flash flash-error" style="display:none;margin-bottom:12px"></div>
+            <div id="settings-success" class="flash flash-success" style="display:none;margin-bottom:12px"></div>
+            <div class="fg"><label>API Key <span class="req">*</span></label><input type="password" id="apiKeyInput" placeholder="sk-ant-api03-…" autocomplete="off"></div>
+            <button class="btn btn-primary" onclick="saveApiKey()">Save API Key</button>
+          </div>
+        </div>
+
+        <!-- Key saved -->
+        <div id="settings-has-key" style="display:none">
+          <div class="form-card">
+            <div class="form-section-title">Anthropic API Key</div>
+            <div class="detail-section" style="margin-bottom:16px">
+              <div class="detail-row"><div class="detail-key">Current Key</div><div class="detail-val" id="settings-masked-key" style="font-family:var(--font-mono);font-size:12px"></div></div>
+            </div>
+            <div id="settings-replace-error" class="flash flash-error" style="display:none;margin-bottom:12px"></div>
+            <div id="settings-replace-success" class="flash flash-success" style="display:none;margin-bottom:12px"></div>
+            <div class="fg"><label>Replace Key</label><input type="password" id="apiKeyReplaceInput" placeholder="sk-ant-api03-…" autocomplete="off"></div>
+            <button class="btn btn-primary" onclick="replaceApiKey()">Update Key</button>
+            <button class="btn btn-danger" onclick="deleteApiKey()" style="margin-top:10px">Remove Key</button>
+          </div>
+        </div>
+
+        <!-- eBay account info -->
+        <div class="form-card">
+          <div class="form-section-title">eBay Account</div>
+          <div class="detail-section">
+            <div class="detail-row"><div class="detail-key">Username</div><div class="detail-val" id="settings-ebay-user"></div></div>
+            <div class="detail-row"><div class="detail-key">Email</div><div class="detail-val" id="settings-ebay-email"></div></div>
+          </div>
+          <button class="btn btn-danger" onclick="doLogout()" style="margin-top:14px">Sign Out</button>
+        </div>
+      </div>
+
+    </main><!-- end app-body -->
+
+    <!-- Bottom nav -->
+    <nav class="app-nav">
+      <button class="nav-item active" id="nav-dashboard" onclick="showView('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-item" id="nav-listings" onclick="showListings('all')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Listings
+      </button>
+      <button class="nav-item" id="nav-new" onclick="showView('new')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        New
+      </button>
+      <button class="nav-item" id="nav-settings" onclick="showView('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </button>
+    </nav>
+
+  </div><!-- end .app -->
+</div><!-- end app-shell -->
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLightbox()">
+  <button id="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<!-- Delete modal -->
+<div class="modal-bg" id="deleteModal">
+  <div class="modal">
+    <div class="modal-title">Delete listing?</div>
+    <div class="modal-body">This will permanently remove the listing and all its photos. This cannot be undone.</div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn btn-danger" style="padding:10px;font-size:14px" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- File inputs -->
+<input type="file" id="newCameraInput" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="newLibraryInput" accept="image/*" multiple style="display:none">
+<input type="file" id="photoUploadInput" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="photoLibraryInput" accept="image/*" multiple style="display:none">
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const S = {
+  user: null,
+  currentView: null,
+  prevView: null,
+  currentListingFilter: 'all',
+  allListings: [],
+  currentListingId: null,
+  currentListing: null,
+  editMode: false,
+  newImages: [],     // [{data, thumb, label}]
+  analyzeResult: null,
+};
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+async function boot() {
+  try {
+    const res = await fetch('/api/me');
+    if (!res.ok) { showLogin(); return; }
+    S.user = await res.json();
+    showApp();
+    updateProfileUI();
+    showView('dashboard');
+  } catch(e) {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  document.getElementById('screen-login').style.display = 'block';
+  document.getElementById('app-shell').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('screen-login').style.display = 'none';
+  document.getElementById('app-shell').style.display = 'block';
+  if (!S.user.hasApiKey) {
+    document.getElementById('no-key-banner').style.display = 'flex';
+  }
+}
+
+function updateProfileUI() {
+  if (!S.user) return;
+  const initials = (S.user.displayName || 'U').slice(0, 2).toUpperCase();
+  document.getElementById('profileBtn').textContent = initials;
+  document.getElementById('profileName').textContent = S.user.displayName;
+  document.getElementById('settings-ebay-user').textContent = S.user.userId;
+  document.getElementById('settings-ebay-email').textContent = S.user.email || '–';
+
+  if (S.user.hasApiKey) {
+    document.getElementById('settings-no-key').style.display = 'none';
+    document.getElementById('settings-has-key').style.display = 'block';
+    document.getElementById('settings-masked-key').textContent = S.user.maskedKey || '••••';
+  } else {
+    document.getElementById('settings-no-key').style.display = 'block';
+    document.getElementById('settings-has-key').style.display = 'none';
+  }
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const target = document.getElementById('view-' + name);
+  if (target) target.classList.add('active');
+
+  S.prevView = S.currentView;
+  S.currentView = name;
+
+  // Nav active state
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  const navBtn = document.getElementById('nav-' + name);
+  if (navBtn) navBtn.classList.add('active');
+
+  // Back button
+  const showBack = ['listings', 'detail', 'settings'].includes(name);
+  document.getElementById('header-back').style.display = showBack ? 'flex' : 'none';
+
+  // Screen name
+  const names = { dashboard: '', listings: 'Listings', detail: 'Item Detail', new: 'New Listing', settings: 'Settings' };
+  document.getElementById('header-screen-name').textContent = names[name] || '';
+
+  // Profile dropdown
+  closeProfile();
+
+  // View init
+  if (name === 'dashboard') initDashboard();
+  if (name === 'settings') initSettings();
+  if (name === 'new') initNew();
+
+  window.scrollTo(0, 0);
+}
+
+function historyBack() {
+  if (S.prevView) showView(S.prevView);
+  else showView('dashboard');
+}
+
+function showListings(filter) {
+  S.currentListingFilter = filter;
+  document.getElementById('listingSearch').value = '';
+  showView('listings');
+  initListings(filter);
+  const filterLabels = { all: 'All Listings', new: 'New', draft: 'Drafts', listed: 'Listed', sold: 'Sold' };
+  document.getElementById('header-screen-name').textContent = filterLabels[filter] || 'Listings';
+  document.getElementById('nav-listings').classList.add('active');
+}
+
+// ── Profile dropdown ──────────────────────────────────────────────────────────
+function toggleProfile() { document.getElementById('profileDropdown').classList.toggle('open'); }
+function closeProfile() { document.getElementById('profileDropdown').classList.remove('open'); }
+document.addEventListener('click', e => {
+  const wrap = document.querySelector('.profile-wrap');
+  if (wrap && !wrap.contains(e.target)) closeProfile();
+});
+
+// ── Flash messages ────────────────────────────────────────────────────────────
+function flash(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `flash flash-${type}`;
+  el.textContent = msg;
+  const container = document.getElementById('flash-container');
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ── Modals ────────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.classList.add('inactive'); });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active'); btn.classList.remove('inactive');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'photos') renderDetailPhotos();
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+async function initDashboard() {
+  document.getElementById('dash-syncing').style.display = 'block';
+  document.getElementById('dash-content').style.display = 'none';
+  document.getElementById('dash-sync-error').style.display = 'none';
+  try {
+    const res = await fetch('/api/dashboard');
+    if (!res.ok) throw new Error('Failed to load dashboard');
+    const data = await res.json();
+    document.getElementById('count-listed').textContent = data.listed ?? 0;
+    document.getElementById('count-sold').textContent = data.sold ?? 0;
+    document.getElementById('count-draft').textContent = data.draft ?? 0;
+    document.getElementById('count-new').textContent = data.new ?? 0;
+    if (data.syncError) {
+      const errBanner = document.getElementById('dash-sync-error');
+      errBanner.textContent = data.syncError;
+      errBanner.style.display = 'flex';
+    }
+  } catch(e) {
+    flash('Could not load dashboard', 'error');
+  } finally {
+    document.getElementById('dash-syncing').style.display = 'none';
+    document.getElementById('dash-content').style.display = 'block';
+  }
+}
+
+// ── Listings ──────────────────────────────────────────────────────────────────
+async function initListings(filter = 'all') {
+  const container = document.getElementById('listings-container');
+  container.innerHTML = '<div class="empty-state"><div class="spinner" style="margin:0 auto"></div></div>';
+  try {
+    const res = await fetch(`/api/listings?status=${filter}`);
+    if (!res.ok) throw new Error();
+    S.allListings = await res.json();
+    renderListings(S.allListings);
+  } catch(e) {
+    container.innerHTML = '<div class="empty-state">Failed to load listings.</div>';
+  }
+}
+
+function renderListings(listings) {
+  const container = document.getElementById('listings-container');
+  if (!listings.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 9 20 9"/></svg>
+        <div>No listings found</div>
+        <span onclick="showView('new')" style="color:var(--accent);font-size:13px;cursor:pointer">Create your first one →</span>
+      </div>`;
+    return;
+  }
+
+  const statusMap = {
+    new:    { cls: 'badge-slate',  label: 'New' },
+    draft:  { cls: 'badge-amber',  label: 'Draft' },
+    listed: { cls: 'badge-active', label: 'Listed' },
+    sold:   { cls: 'badge-green',  label: 'Sold' },
+  };
+
+  container.innerHTML = listings.map(l => {
+    const s = statusMap[l.status] || { cls: 'badge-slate', label: l.status };
+    const thumb = l.photoIds?.[0]
+      ? `<img src="/api/photos/${S.user.userId}/${l.photoIds[0]}_thumb.jpg" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0" onerror="this.style.display='none'">`
+      : `<div style="width:44px;height:44px;background:var(--surface2);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:20px">📦</div>`;
+    const date = new Date(l.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `
+      <div class="card" onclick="openDetail('${l.id}')">
+        ${thumb}
+        <div class="card-main">
+          <div class="card-title">${esc(l.title || 'Untitled')}</div>
+          <div class="card-sub">$${l.price || '–'} · ${date}</div>
+        </div>
+        <span class="badge ${s.cls}">${s.label}</span>
+        <div class="card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>`;
+  }).join('');
+}
+
+function filterListings(q) {
+  const filtered = q
+    ? S.allListings.filter(l => (l.title||'').toLowerCase().includes(q.toLowerCase()))
+    : S.allListings;
+  renderListings(filtered);
+}
+
+// ── Detail ────────────────────────────────────────────────────────────────────
+async function openDetail(id) {
+  S.currentListingId = id;
+  S.editMode = false;
+  showView('detail');
+
+  document.getElementById('detail-loading').style.display = 'block';
+  document.getElementById('detail-body').style.display = 'none';
+
+  // Reset tabs to Info
+  document.querySelectorAll('.tab-btn').forEach((b, i) => { b.classList.toggle('active', i===0); b.classList.toggle('inactive', i!==0); });
+  document.querySelectorAll('.tab-panel').forEach((p, i) => p.classList.toggle('active', i===0));
+
+  try {
+    const res = await fetch(`/api/listings/${id}`);
+    if (!res.ok) throw new Error('Not found');
+    S.currentListing = await res.json();
+    renderDetail(S.currentListing);
+  } catch(e) {
+    flash('Could not load listing', 'error');
+  } finally {
+    document.getElementById('detail-loading').style.display = 'none';
+    document.getElementById('detail-body').style.display = 'block';
+  }
+}
+
+const STATUS_BADGES = {
+  new:    'badge-slate',
+  draft:  'badge-amber',
+  listed: 'badge-active',
+  sold:   'badge-green',
+};
+
+function renderDetail(l) {
+  document.getElementById('detail-id-badge').textContent = 'LST-' + (l.id || '').slice(0,8).toUpperCase();
+  const sb = document.getElementById('detail-status-badge');
+  sb.textContent = l.status.charAt(0).toUpperCase() + l.status.slice(1);
+  sb.className = 'badge ' + (STATUS_BADGES[l.status] || 'badge-slate');
+  document.getElementById('detail-title-display').textContent = l.title || 'Untitled';
+  const date = new Date(l.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  document.getElementById('detail-meta').textContent = `${l.condition || ''}  ·  ${date}  ·  ${l.imageCount || 0} photo(s)`;
+
+  // eBay badge
+  const ebayBadge = document.getElementById('detail-ebay-badge');
+  ebayBadge.style.display = l.ebayItemId ? 'inline-flex' : 'none';
+
+  // Read mode fields
+  document.getElementById('dv-price').textContent = l.price ? `$${l.price}` : '–';
+  document.getElementById('dv-condition').textContent = l.condition || '–';
+  document.getElementById('dv-category').textContent = l.category || '–';
+  document.getElementById('dv-title').textContent = l.title || '–';
+  document.getElementById('dv-description').textContent = l.description?.replace(/<[^>]+>/g, '') || '–';
+  document.getElementById('dv-specifics').textContent = l.itemSpecifics || '–';
+  document.getElementById('dv-keywords').textContent = l.searchKeywords || '–';
+  document.getElementById('dv-shipping').textContent = l.shippingTip || '–';
+  const notesSection = document.getElementById('dv-notes-section');
+  if (l.notes) { notesSection.style.display = 'block'; document.getElementById('dv-notes').textContent = l.notes; }
+  else notesSection.style.display = 'none';
+
+  // eBay tab
+  document.getElementById('ebay-status').innerHTML = `<span class="badge ${STATUS_BADGES[l.status] || 'badge-slate'}">${l.status}</span>`;
+  document.getElementById('ebay-category-id').textContent = l.ebayCategoryId || 'Not set';
+  document.getElementById('ebay-condition-id').textContent = l.conditionId || 'Not set';
+  const ebayIdRow = document.getElementById('ebay-item-id-row');
+  if (l.ebayItemId) {
+    ebayIdRow.style.display = 'flex';
+    document.getElementById('ebay-item-id').textContent = l.ebayItemId;
+  } else {
+    ebayIdRow.style.display = 'none';
+  }
+
+  // Push button label
+  document.getElementById('btn-push').textContent = l.status === 'draft' ? '↑ Re-push to eBay' : '↑ Push to eBay';
+
+  renderDetailPhotos();
+  exitEditMode();
+}
+
+function enterEditMode() {
+  const l = S.currentListing;
+  if (!l) return;
+  S.editMode = true;
+  document.getElementById('detail-read-mode').style.display = 'none';
+  document.getElementById('detail-edit-mode').style.display = 'block';
+  document.getElementById('btn-edit').style.display = 'none';
+  document.getElementById('btn-push').style.display = 'none';
+  document.getElementById('btn-save').style.display = 'inline-flex';
+  document.getElementById('btn-cancel').style.display = 'inline-flex';
+
+  document.getElementById('edit-title').value = l.title || '';
+  document.getElementById('edit-price').value = l.price || '';
+  document.getElementById('edit-condition').value = l.condition || 'Used - Good';
+  document.getElementById('edit-category').value = l.category || '';
+  document.getElementById('edit-description').value = (l.description || '').replace(/<[^>]+>/g, '');
+  document.getElementById('edit-specifics').value = l.itemSpecifics || '';
+  document.getElementById('edit-keywords').value = l.searchKeywords || '';
+  document.getElementById('edit-shipping').value = l.shippingTip || '';
+  document.getElementById('edit-notes').value = l.notes || '';
+}
+
+function exitEditMode() {
+  S.editMode = false;
+  document.getElementById('detail-read-mode').style.display = 'block';
+  document.getElementById('detail-edit-mode').style.display = 'none';
+  document.getElementById('btn-edit').style.display = 'inline-flex';
+  document.getElementById('btn-push').style.display = 'inline-flex';
+  document.getElementById('btn-save').style.display = 'none';
+  document.getElementById('btn-cancel').style.display = 'none';
+}
+
+function cancelEdit() {
+  exitEditMode();
+  renderDetail(S.currentListing);
+}
+
+async function saveDetail() {
+  const updates = {
+    title: document.getElementById('edit-title').value.trim(),
+    price: parseFloat(document.getElementById('edit-price').value) || 0,
+    condition: document.getElementById('edit-condition').value,
+    category: document.getElementById('edit-category').value.trim(),
+    description: document.getElementById('edit-description').value.trim(),
+    itemSpecifics: document.getElementById('edit-specifics').value.trim(),
+    searchKeywords: document.getElementById('edit-keywords').value.trim(),
+    shippingTip: document.getElementById('edit-shipping').value.trim(),
+    notes: document.getElementById('edit-notes').value.trim(),
+  };
+  try {
+    const res = await fetch(`/api/listings/${S.currentListingId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error('Save failed');
+    S.currentListing = await res.json();
+    renderDetail(S.currentListing);
+    flash('Changes saved');
+  } catch(e) {
+    flash('Save failed. Please try again.', 'error');
+  }
+}
+
+function deleteListing() { openModal('deleteModal'); }
+
+async function confirmDelete() {
+  closeModal('deleteModal');
+  try {
+    const res = await fetch(`/api/listings/${S.currentListingId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error();
+    flash('Listing deleted');
+    showListings(S.currentListingFilter);
+  } catch(e) {
+    flash('Delete failed', 'error');
+  }
+}
+
+// ── Detail Photos ─────────────────────────────────────────────────────────────
+function renderDetailPhotos() {
+  const l = S.currentListing;
+  if (!l) return;
+  const grid = document.getElementById('detail-photos-grid');
+  const empty = document.getElementById('photos-empty');
+
+  const photos = l.photoIds || [];
+  if (!photos.length) {
+    grid.innerHTML = '';
+    empty.style.display = 'flex';
+    return;
+  }
+  empty.style.display = 'none';
+
+  grid.innerHTML = photos.map(pid => `
+    <div class="detail-photo-item">
+      <img src="/api/photos/${S.user.userId}/${pid}.jpg"
+           onclick="openLightbox(this.src)"
+           onerror="this.parentElement.style.background='var(--surface2)'">
+      <button class="detail-photo-delete" onclick="deletePhoto('${pid}')">✕</button>
+    </div>
+  `).join('') + (photos.length < 6 ? `
+    <div class="add-photo-zone" onclick="document.getElementById('photoLibraryInput').click()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add
+    </div>
+  ` : '');
+}
+
+async function deletePhoto(photoId) {
+  if (!confirm('Delete this photo?')) return;
+  try {
+    const res = await fetch(`/api/listings/${S.currentListingId}/photos/${photoId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    S.currentListing.photoIds = S.currentListing.photoIds.filter(p => p !== photoId);
+    S.currentListing.imageCount = data.imageCount;
+    renderDetailPhotos();
+    flash('Photo deleted');
+  } catch(e) {
+    flash('Failed to delete photo', 'error');
+  }
+}
+
+async function uploadPhotoToListing(file) {
+  if (!S.currentListingId) return;
+  try {
+    const { full, thumb } = await processImage(file);
+    const res = await fetch(`/api/listings/${S.currentListingId}/photos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full, thumb }),
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    if (!S.currentListing.photoIds) S.currentListing.photoIds = [];
+    S.currentListing.photoIds.push(data.photoId);
+    S.currentListing.imageCount = data.imageCount;
+    renderDetailPhotos();
+    flash('Photo added');
+  } catch(e) {
+    flash('Failed to upload photo', 'error');
+  }
+}
+
+document.getElementById('photoUploadInput').addEventListener('change', e => {
+  if (e.target.files[0]) uploadPhotoToListing(e.target.files[0]);
+  e.target.value = '';
+});
+document.getElementById('photoLibraryInput').addEventListener('change', e => {
+  Array.from(e.target.files).forEach(uploadPhotoToListing);
+  e.target.value = '';
+});
+
+// ── Push to eBay ──────────────────────────────────────────────────────────────
+async function pushToEbay() {
+  const errBanner = document.getElementById('push-error-banner');
+  const okBanner = document.getElementById('push-success-banner');
+  errBanner.style.display = 'none';
+  okBanner.style.display = 'none';
+
+  // Switch to eBay tab so user sees feedback
+  document.querySelectorAll('.tab-btn').forEach((b, i) => { b.classList.toggle('active', i===2); b.classList.toggle('inactive', i!==2); });
+  document.querySelectorAll('.tab-panel').forEach((p, i) => p.classList.toggle('active', i===2));
+
+  const btn = document.getElementById('btn-push-ebay');
+  btn.disabled = true;
+  btn.textContent = 'Pushing…';
+
+  try {
+    const res = await fetch('/api/ebay/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ listingId: S.currentListingId }),
+    });
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      okBanner.textContent = data.message || 'Pushed to eBay as draft.';
+      okBanner.style.display = 'block';
+      // Refresh listing
+      const updated = await fetch(`/api/listings/${S.currentListingId}`);
+      if (updated.ok) { S.currentListing = await updated.json(); renderDetail(S.currentListing); }
+    } else {
+      const errors = data.errors?.map(e => e.message).join(', ') || data.message || 'eBay rejected the listing.';
+      errBanner.textContent = errors;
+      errBanner.style.display = 'block';
+    }
+  } catch(e) {
+    errBanner.textContent = 'Push failed. Please try again.';
+    errBanner.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '↑ Push to eBay as Draft';
+  }
+}
+
+// ── New Listing ───────────────────────────────────────────────────────────────
+function initNew() {
+  S.newImages = [];
+  S.analyzeResult = null;
+  showNewStep('photos');
+  renderNewPhotoStrip();
+  document.getElementById('new-photos-error').style.display = 'none';
+  document.getElementById('new-analyze-error').style.display = 'none';
+  document.getElementById('new-notes').value = '';
+}
+
+function showNewStep(name) {
+  ['photos', 'details', 'analyzing', 'review'].forEach(s => {
+    document.getElementById('new-step-' + s).style.display = s === name ? 'block' : 'none';
+  });
+}
+
+function cancelNew() {
+  showView(S.prevView || 'dashboard');
+}
+
+function goToDetails() {
+  if (!S.newImages.length) {
+    document.getElementById('new-photos-error').textContent = 'Add at least one photo.';
+    document.getElementById('new-photos-error').style.display = 'block';
+    return;
+  }
+  showNewStep('details');
+}
+
+function backToPhotos() { showNewStep('photos'); }
+
+function retryAnalyze() { showNewStep('details'); }
+
+function renderNewPhotoStrip() {
+  const strip = document.getElementById('newPhotoStrip');
+  let html = S.newImages.map((img, i) => `
+    <div class="photo-capture-thumb">
+      <img src="${img.thumb}" alt="Photo ${i+1}">
+      <button class="photo-rm" onclick="removeNewPhoto(${i})">✕</button>
+    </div>
+  `).join('');
+  if (S.newImages.length < 6) {
+    html += `<div class="photo-add-btn" onclick="document.getElementById('newLibraryInput').click()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add
+    </div>`;
+  }
+  strip.innerHTML = html;
+  document.getElementById('btn-to-details').disabled = S.newImages.length === 0;
+}
+
+function removeNewPhoto(i) {
+  S.newImages.splice(i, 1);
+  renderNewPhotoStrip();
+}
+
+document.getElementById('newCameraInput').addEventListener('change', e => { handleNewFiles(e.target.files); e.target.value = ''; });
+document.getElementById('newLibraryInput').addEventListener('change', e => { handleNewFiles(e.target.files); e.target.value = ''; });
+
+async function handleNewFiles(fileList) {
+  for (const file of Array.from(fileList)) {
+    if (S.newImages.length >= 6) break;
+    const processed = await processImage(file);
+    S.newImages.push({ data: processed.full, thumb: `data:image/jpeg;base64,${processed.full}`, smallThumb: processed.thumb });
+  }
+  renderNewPhotoStrip();
+}
+
+async function runAnalyze() {
+  if (!S.user.hasApiKey) {
+    showView('settings');
+    flash('Please add your Anthropic API key first.', 'error');
+    return;
+  }
+
+  showNewStep('analyzing');
+  document.getElementById('analyze-label').textContent = `Analyzing ${S.newImages.length} photo${S.newImages.length > 1 ? 's' : ''}…`;
+
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        images: S.newImages.map(i => i.data),
+        condition: document.getElementById('new-condition').value,
+        notes: document.getElementById('new-notes').value,
+      }),
+    });
+    const data = await res.json();
+    if (data.error === 'NO_API_KEY') { showView('settings'); flash('Please add your Anthropic API key first.', 'error'); return; }
+    if (!res.ok) throw new Error(data.error || 'Analysis failed');
+    S.analyzeResult = data;
+    populateReview(data);
+    showNewStep('review');
+  } catch(e) {
+    showNewStep('review');
+    document.getElementById('new-analyze-error').textContent = e.message;
+    document.getElementById('new-analyze-error').style.display = 'block';
+  }
+}
+
+function populateReview(d) {
+  document.getElementById('review-price').textContent = `$${d.price || '–'}`;
+  document.getElementById('review-range').textContent = d.priceLow && d.priceHigh ? `Range: $${d.priceLow} – $${d.priceHigh}` : '';
+  document.getElementById('review-title').value = d.title || '';
+  document.getElementById('review-category').value = d.category || '';
+  document.getElementById('review-description').value = (d.description || '').replace(/<[^>]+>/g, '');
+  document.getElementById('review-specifics').value = d.itemSpecifics || '';
+  document.getElementById('review-keywords').value = d.searchKeywords || '';
+  document.getElementById('review-shipping').value = d.shippingTip || '';
+}
+
+async function saveListing() {
+  const d = S.analyzeResult || {};
+  const body = {
+    title: document.getElementById('review-title').value.trim(),
+    category: document.getElementById('review-category').value.trim(),
+    ebayCategoryId: d.ebayCategoryId || '',
+    conditionId: d.conditionId || '',
+    condition: document.getElementById('new-condition').value,
+    price: parseFloat(document.getElementById('review-price').textContent.replace('$', '')) || 0,
+    description: document.getElementById('review-description').value.trim(),
+    itemSpecifics: document.getElementById('review-specifics').value.trim(),
+    searchKeywords: document.getElementById('review-keywords').value.trim(),
+    shippingTip: document.getElementById('review-shipping').value.trim(),
+    notes: document.getElementById('new-notes').value.trim(),
+    imageCount: S.newImages.length,
+    photoIds: [],
+  };
+
+  try {
+    // 1. Create listing record
+    const res = await fetch('/api/listings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error('Failed to create listing');
+    const listing = await res.json();
+
+    // 2. Upload photos
+    if (S.newImages.length) {
+      showNewStep('analyzing');
+      document.getElementById('analyze-label').textContent = 'Saving photos…';
+      for (const img of S.newImages) {
+        await fetch(`/api/listings/${listing.id}/photos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ full: img.data, thumb: img.smallThumb }),
+        });
+      }
+    }
+
+    flash('Listing saved!');
+    await openDetail(listing.id);
+  } catch(e) {
+    showNewStep('review');
+    document.getElementById('new-analyze-error').textContent = 'Save failed: ' + e.message;
+    document.getElementById('new-analyze-error').style.display = 'block';
+  }
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+async function initSettings() {
+  try {
+    const res = await fetch('/api/settings');
+    const data = await res.json();
+    if (data.hasApiKey) {
+      document.getElementById('settings-no-key').style.display = 'none';
+      document.getElementById('settings-has-key').style.display = 'block';
+      document.getElementById('settings-masked-key').textContent = data.maskedKey;
+    } else {
+      document.getElementById('settings-no-key').style.display = 'block';
+      document.getElementById('settings-has-key').style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+async function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  const errEl = document.getElementById('settings-error');
+  const okEl = document.getElementById('settings-success');
+  errEl.style.display = 'none'; okEl.style.display = 'none';
+  if (!key.startsWith('sk-ant-')) { errEl.textContent = 'Key must start with sk-ant-'; errEl.style.display = 'block'; return; }
+  try {
+    const res = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ anthropicKey: key }) });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
+    document.getElementById('apiKeyInput').value = '';
+    S.user.hasApiKey = true;
+    document.getElementById('no-key-banner').style.display = 'none';
+    okEl.textContent = 'API key saved.';
+    okEl.style.display = 'block';
+    setTimeout(() => initSettings(), 1000);
+    setTimeout(() => showView('dashboard'), 1500);
+  } catch(e) { errEl.textContent = 'Save failed'; errEl.style.display = 'block'; }
+}
+
+async function replaceApiKey() {
+  const key = document.getElementById('apiKeyReplaceInput').value.trim();
+  const errEl = document.getElementById('settings-replace-error');
+  const okEl = document.getElementById('settings-replace-success');
+  errEl.style.display = 'none'; okEl.style.display = 'none';
+  if (!key.startsWith('sk-ant-')) { errEl.textContent = 'Key must start with sk-ant-'; errEl.style.display = 'block'; return; }
+  try {
+    const res = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ anthropicKey: key }) });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
+    document.getElementById('apiKeyReplaceInput').value = '';
+    okEl.textContent = 'Key updated.';
+    okEl.style.display = 'block';
+    setTimeout(() => initSettings(), 800);
+  } catch(e) { errEl.textContent = 'Update failed'; errEl.style.display = 'block'; }
+}
+
+async function deleteApiKey() {
+  if (!confirm('Remove your API key? You will not be able to generate listings until you add it back.')) return;
+  try {
+    await fetch('/api/settings', { method: 'DELETE' });
+    S.user.hasApiKey = false;
+    document.getElementById('no-key-banner').style.display = 'flex';
+    initSettings();
+    flash('API key removed');
+  } catch(e) { flash('Failed to remove key', 'error'); }
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+async function doLogout() {
+  closeProfile();
+  await fetch('/api/auth/logout', { method: 'POST' });
+  S.user = null;
+  showLogin();
+}
+
+// ── Image processing ──────────────────────────────────────────────────────────
+function processImage(file) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      // Full (max 1024px)
+      const canvas = document.createElement('canvas');
+      const max = 1024;
+      let w = img.width, h = img.height;
+      if (w > max || h > max) {
+        if (w > h) { h = Math.round(h * max / w); w = max; }
+        else { w = Math.round(w * max / h); h = max; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const full = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+
+      // Thumb (max 200px)
+      const tc = document.createElement('canvas');
+      const tm = 200; let tw = img.width, th = img.height;
+      if (tw > tm || th > tm) {
+        if (tw > th) { th = Math.round(th * tm / tw); tw = tm; }
+        else { tw = Math.round(tw * tm / th); th = tm; }
+      }
+      tc.width = tw; tc.height = th;
+      tc.getContext('2d').drawImage(img, 0, 0, tw, th);
+      const thumb = tc.toDataURL('image/jpeg', 0.7).split(',')[1];
+
+      URL.revokeObjectURL(url);
+      resolve({ full, thumb });
+    };
+    img.src = url;
+  });
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function esc(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Go ────────────────────────────────────────────────────────────────────────
+boot();
+</script>
+</body>
+</html>
